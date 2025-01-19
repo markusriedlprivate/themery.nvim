@@ -88,46 +88,61 @@ local function setColorscheme(theme)
 end
 
 local function updateView(direction)
-	local themeList = config.getSettings().themes
-	position = position + direction
-	api.nvim_set_option_value("modifiable", true, {buf=window.getBuf()})
+    local themeList = config.getSettings().themes
+    local themeCount = #themeList
+    position = position + direction
+    print("Current Position: ", position) -- Debug log for position
 
-	-- cycle to the last result if cursor is at the top of the results list and moved up
-	if position < resultsStart then
-		position = #themeList + resultsStart - 1
-	end
+    api.nvim_set_option_value("modifiable", true, {buf = window.getBuf()})
 
-	-- cycle to the first result if cursor is at the bottom of the results list and moved down
-	if position > #themeList + 1 then
-		position = resultsStart
-	end
+    -- Cycle to the last result if cursor is at the top of the results list and moved up
+    if position < resultsStart then
+        position = themeCount + resultsStart - 1
+        print("Cycled to the last item: ", position) -- Debug log for cycling
+    end
 
-	if #themeList == 0 then
-		window.printNoThemesLoaded()
-		api.nvim_set_option_value("modifiable", false, {buf=window.getBuf()})
-		return
-	end
+    -- Cycle to the first result if cursor is at the bottom of the results list and moved down
+    if position > themeCount + resultsStart - 1 then
+        position = resultsStart
+        print("Cycled to the first item: ", position) -- Debug log for cycling
+    end
 
-	local resultToPrint = {}
-	for i in ipairs(themeList) do
-		local prefix = "  "
+    if themeCount == 0 then
+        window.printNoThemesLoaded()
+        api.nvim_set_option_value("modifiable", false, {buf = window.getBuf()})
+        return
+    end
 
-		if selectedThemeId == i then
-			prefix = "> "
-		end
+    -- Prepare lines to print
+    local resultToPrint = {}
+    for i = 1, themeCount do
+        local prefix = "  "
+        if selectedThemeId == i then
+            prefix = "> "
+        end
+        resultToPrint[i] = prefix .. themeList[i].name
+    end
 
-		resultToPrint[i] = prefix .. themeList[i].name
-	end
+    -- Update buffer
+    api.nvim_buf_set_lines(window.getBuf(), 1, -1, false, resultToPrint)
+    print("Buffer Updated") -- Debug log for buffer update
 
-	api.nvim_buf_set_lines(window.getBuf(), 1, -1, false, resultToPrint)
-	api.nvim_win_set_cursor(window.getWin(), { position, 0 })
+    -- Move cursor
+    api.nvim_win_set_cursor(window.getWin(), {position, 0})
 
-	if config.getSettings().livePreview then
-		setColorscheme(themeList[position - 1])
-	end
+    -- Apply live preview if enabled
+    if config.getSettings().livePreview then
+        local themeIndex = position - resultsStart + 1
+        if themeIndex >= 1 and themeIndex <= themeCount then
+            print("Applying colorscheme: ", themeList[themeIndex].name) -- Debug log for colorscheme
+            setColorscheme(themeList[themeIndex])
+        end
+    end
 
-	api.nvim_set_option_value("modifiable", false, {buf=window.getBuf()})
+    api.nvim_set_option_value("modifiable", false, {buf = window.getBuf()})
+    print("View updated successfully!") -- Final confirmation
 end
+
 
 local function revertTheme()
 	local colorschemeToSet
